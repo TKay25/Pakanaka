@@ -3,928 +3,1528 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resort POS - Receipt System</title>
+    <title>Resort POS System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --resort-primary: #0d6efd;
+            --resort-primary: #0b5ed7;
             --resort-secondary: #198754;
-            --resort-accent: #ffc107;
-            --resort-danger: #dc3545;
-            --receipt-width: 300px;
+            --resort-accent: #ffb703;
+            --bg-muted: #f5f7fb;
+            --receipt-width: 320px;
+            --vat-rate: 15%;
         }
         
         body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 0.9rem;
+            background-color: var(--bg-muted);
+            font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
         }
         
+        /* Sidebar */
+        .sidebar {
+            width: 72px;
+            height: 100vh;
+            background: linear-gradient(180deg,#23314a,#1b2836);
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            transition: width 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .sidebar:hover {
+            width: 220px;
+        }
+        
+        .sidebar-item {
+            color: #ecf0f1;
+            padding: 12px 15px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .sidebar-item:hover {
+            background: #34495e;
+            border-left-color: var(--resort-accent);
+            color: white;
+        }
+        
+        .sidebar-item.active {
+            background: var(--resort-primary);
+            border-left-color: white;
+        }
+        
+        .sidebar-icon {
+            min-width: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .sidebar-text {
+            margin-left: 15px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .sidebar:hover .sidebar-text {
+            opacity: 1;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 70px;
+            padding: 10px;
+            transition: margin-left 0.3s;
+        }
+        
+        .sidebar:hover ~ .main-content {
+            margin-left: 220px;
+        }
+        
+        /* POS Layout */
         .pos-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+            display: flex;
+            gap: 10px;
+            height: 85vh;
+        }
+
+        /* Buttons */
+        .btn-action {
+            font-size: 0.85rem;
+            padding: 10px 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.04);
         }
         
-        /* Order Cart Styles */
-        .order-cart {
+        .pos-left {
+            flex: 3;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            height: 85vh;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
         }
         
+        .pos-right {
+            flex: 1;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        /* Cart Styles */
         .cart-header {
             background: var(--resort-primary);
             color: white;
-            padding: 15px;
-            border-radius: 10px 10px 0 0;
+            padding: 12px;
+            border-radius: 8px 8px 0 0;
         }
         
         .cart-items {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 10px;
         }
         
         .cart-item {
             border-bottom: 1px solid #eee;
-            padding: 10px 0;
-            transition: background 0.2s;
-        }
-        
-        .cart-item:hover {
-            background: #f8f9fa;
+            padding: 8px 0;
         }
         
         .item-quantity {
-            width: 60px;
+            width: 50px;
             text-align: center;
+            font-size: 0.8rem;
+            padding: 2px;
         }
         
-        /* Receipt Preview */
-        .receipt-preview {
+        /* Receipt */
+        .receipt-container {
             background: white;
-            width: var(--receipt-width);
-            min-height: 500px;
-            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
             font-family: 'Courier New', monospace;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border: 1px dashed #ccc;
-            margin: 0 auto;
+            font-size: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
         }
         
         .receipt-header {
             text-align: center;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
         }
         
         .receipt-items {
-            margin: 15px 0;
+            margin: 8px 0;
         }
         
         .receipt-item {
             display: flex;
             justify-content: space-between;
-            margin: 5px 0;
+            margin: 2px 0;
         }
         
         .receipt-total {
-            border-top: 2px dashed #000;
-            padding-top: 10px;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-        
-        /* Payment Modal */
-        .payment-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            z-index: 1000;
-        }
-        
-        .payment-content {
-            background: white;
-            width: 500px;
-            margin: 50px auto;
-            border-radius: 10px;
-            padding: 20px;
-        }
-        
-        /* Print Styles */
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            
-            .receipt-preview {
-                box-shadow: none;
-                border: none;
-                width: 100%;
-                min-height: auto;
-            }
-            
-            body {
-                background: white !important;
-            }
-        }
-        
-        /* Keyboard Styles */
-        .num-pad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .num-key {
-            height: 60px;
-            font-size: 1.2rem;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+            margin-top: 10px;
             font-weight: bold;
         }
         
         /* Quick Items */
-        .quick-items {
+        .quick-items-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 10px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            padding: 10px;
         }
         
-        .quick-item {
-            padding: 10px;
+        .quick-item-card {
+            padding: 8px;
             text-align: center;
-            background: #f8f9fa;
+            background: white;
             border: 1px solid #dee2e6;
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.2s;
         }
         
-        .quick-item:hover {
+        .quick-item-card:hover {
             background: var(--resort-primary);
             color: white;
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
         
-        /* Animation */
-        @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .quick-item-price {
+            font-weight: bold;
+            color: var(--resort-secondary);
         }
         
-        .cart-item-added {
-            animation: slideIn 0.3s ease-out;
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            border-bottom: 2px solid #dee2e6;
+            overflow-x: auto;
         }
         
-        /* Status Badges */
-        .status-badge {
+        .category-tab {
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
             font-size: 0.8rem;
-            padding: 3px 8px;
-            border-radius: 10px;
         }
         
-        .status-paid {
-            background: #d1e7dd;
-            color: #0f5132;
+        .category-tab.active {
+            background: var(--resort-primary);
+            color: white;
+            border-color: var(--resort-primary);
         }
         
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
+        /* Room Selector */
+        .room-selector {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px;
         }
         
-        /* Scrollbar Styling */
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            padding: 10px;
+        }
+        
+        .btn-action {
+            font-size: 0.8rem;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        /* Module Content */
+        .module-content {
+            display: none;
+        }
+        
+        .module-content.active {
+            display: block;
+        }
+        
+        /* Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 5px;
         }
         
         ::-webkit-scrollbar-track {
             background: #f1f1f1;
-            border-radius: 4px;
+            border-radius: 3px;
         }
         
         ::-webkit-scrollbar-thumb {
             background: #888;
-            border-radius: 4px;
+            border-radius: 3px;
         }
         
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        /* Room Badge */
+        .room-badge {
+            background: #0d6efd;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
         }
     </style>
 </head>
 <body>
-    <div class="pos-container">
-        <div class="row g-4">
-            <!-- Left Column: Order Management -->
-            <div class="col-lg-8">
-                <div class="order-cart">
-                    <!-- Cart Header -->
-                    <div class="cart-header d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-0"><i class="bi bi-cart3"></i> Current Order</h4>
-                            <small class="opacity-75">Table 12 • 4 Guests • Server: John</small>
-                        </div>
-                        <div>
-                            <span class="badge bg-warning">Dine-in</span>
-                            <span id="orderTime" class="text-white">10:30 AM</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Items -->
-                    <div class="p-3 border-bottom">
-                        <h6><i class="bi bi-lightning"></i> Quick Items</h6>
-                        <div class="quick-items">
-                            <div class="quick-item" data-item="Cocktail" data-price="12">
-                                <i class="bi bi-cup-straw fs-4"></i>
-                                <div>Cocktail</div>
-                                <small>$12.00</small>
-                            </div>
-                            <div class="quick-item" data-item="Beer" data-price="8">
-                                <i class="bi bi-cup fs-4"></i>
-                                <div>Local Beer</div>
-                                <small>$8.00</small>
-                            </div>
-                            <div class="quick-item" data-item="Burger" data-price="18">
-                                <i class="bi bi-basket fs-4"></i>
-                                <div>Resort Burger</div>
-                                <small>$18.00</small>
-                            </div>
-                            <div class="quick-item" data-item="Salad" data-price="14">
-                                <i class="bi bi-flower2 fs-4"></i>
-                                <div>Garden Salad</div>
-                                <small>$14.00</small>
-                            </div>
-                            <div class="quick-item" data-item="Coffee" data-price="5">
-                                <i class="bi bi-cup-hot fs-4"></i>
-                                <div>Premium Coffee</div>
-                                <small>$5.00</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Cart Items -->
-                    <div class="cart-items">
-                        <div id="cartItems">
-                            <!-- Items will be added here dynamically -->
-                            <div class="text-center text-muted p-5">
-                                <i class="bi bi-cart-x fs-1"></i>
-                                <p class="mt-3">No items in cart</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Cart Footer -->
-                    <div class="border-top p-3">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="input-group">
-                                    <input type="text" 
-                                           class="form-control" 
-                                           placeholder="Search or scan item..." 
-                                           id="itemSearch">
-                                    <button class="btn btn-outline-primary" type="button">
-                                        <i class="bi bi-upc-scan"></i> Scan
-                                    </button>
-                                </div>
-                                <div class="mt-2">
-                                    <button class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-tag"></i> Add Discount
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm ms-2">
-                                        <i class="bi bi-person-plus"></i> Split Bill
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <h5>Subtotal: <span id="subtotal">$0.00</span></h5>
-                                <small class="text-muted">Tax: <span id="taxAmount">$0.00</span></small><br>
-                                <h4 class="text-primary">Total: <span id="totalAmount">$0.00</span></h4>
-                                <button class="btn btn-success btn-lg mt-2 w-100" id="processPayment">
-                                    <i class="bi bi-credit-card"></i> Process Payment
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Column: Receipt & Actions -->
-            <div class="col-lg-4">
-                <!-- Receipt Preview -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0"><i class="bi bi-receipt"></i> Receipt Preview</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="receipt-preview" id="receiptContent">
-                            <div class="receipt-header">
-                                <h5 class="mb-1">SUNSET RESORT & SPA</h5>
-                                <small>123 Ocean Drive, Paradise Island</small>
-                                <div class="mt-2">
-                                    <small>Tel: (123) 456-7890</small><br>
-                                    <small>www.sunsetresort.com</small>
-                                </div>
-                                <hr>
-                                <div class="text-start">
-                                    <small>Date: <span id="receiptDate">Nov 15, 2023</span></small><br>
-                                    <small>Time: <span id="receiptTime">10:30 AM</span></small><br>
-                                    <small>Order #: <span id="orderNumber">RES-001234</span></small><br>
-                                    <small>Server: John (Table 12)</small>
-                                </div>
-                            </div>
-                            
-                            <div class="receipt-items" id="receiptItems">
-                                <!-- Receipt items will be populated here -->
-                                <div class="text-center text-muted">
-                                    --- No items ---
-                                </div>
-                            </div>
-                            
-                            <div class="receipt-total">
-                                <div class="d-flex justify-content-between">
-                                    <span>Subtotal:</span>
-                                    <span id="receiptSubtotal">$0.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Tax (8%):</span>
-                                    <span id="receiptTax">$0.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Service (10%):</span>
-                                    <span>$0.00</span>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between fw-bold">
-                                    <span>TOTAL:</span>
-                                    <span id="receiptTotal">$0.00</span>
-                                </div>
-                            </div>
-                            
-                            <div class="text-center mt-4">
-                                <small>Thank you for visiting!</small><br>
-                                <small>*** SERVICE CHARGE MAY APPLY ***</small><br>
-                                <small>For inquiries: info@sunsetresort.com</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Actions Panel -->
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0"><i class="bi bi-gear"></i> Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <button class="btn btn-outline-primary w-100" id="printReceipt">
-                                    <i class="bi bi-printer"></i> Print
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-success w-100" id="emailReceipt">
-                                    <i class="bi bi-envelope"></i> Email
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-info w-100" id="saveOrder">
-                                    <i class="bi bi-save"></i> Save
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-danger w-100" id="clearOrder">
-                                    <i class="bi bi-x-circle"></i> Clear
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Numeric Keypad -->
-                        <div class="mt-4">
-                            <h6><i class="bi bi-keyboard"></i> Numeric Keypad</h6>
-                            <div class="num-pad">
-                                <button class="btn btn-outline-secondary num-key" data-value="1">1</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="2">2</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="3">3</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="4">4</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="5">5</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="6">6</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="7">7</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="8">8</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="9">9</button>
-                                <button class="btn btn-outline-secondary num-key" data-value=".">.</button>
-                                <button class="btn btn-outline-secondary num-key" data-value="0">0</button>
-                                <button class="btn btn-outline-danger" id="backspace">
-                                    <i class="bi bi-backspace"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+        <a href="#" class="sidebar-item active" data-module="restaurant">
+            <i class="sidebar-icon bi bi-cup-hot"></i>
+            <span class="sidebar-text">Restaurant</span>
+        </a>
+
+        <a href="#" class="sidebar-item" data-module="accommodation">
+            <i class="sidebar-icon bi bi-building"></i>
+            <span class="sidebar-text">Accommodation</span>
+        </a>
+        
+        <a href="#" class="sidebar-item" data-module="activities">
+            <i class="sidebar-icon bi bi-bicycle"></i>
+            <span class="sidebar-text">Activities</span>
+        </a>
+        <a href="#" class="sidebar-item" data-module="events">
+            <i class="sidebar-icon bi bi-calendar-event"></i>
+            <span class="sidebar-text">Events</span>
+        </a>
+        <a href="#" class="sidebar-item" data-module="conferences">
+            <i class="sidebar-icon bi bi-people"></i>
+            <span class="sidebar-text">Conferences</span>
+        </a>
+        <a href="#" class="sidebar-item" data-module="construction">
+            <i class="sidebar-icon bi bi-tools"></i>
+            <span class="sidebar-text">Construction</span>
+        </a>
+        <div class="mt-auto">
+            <a href="#" class="sidebar-item" data-module="settings" id="settingsBtn">
+                <i class="sidebar-icon bi bi-gear"></i>
+                <span class="sidebar-text">Settings</span>
+            </a>
         </div>
     </div>
     
-    <!-- Payment Modal -->
-    <div class="payment-modal" id="paymentModal">
-        <div class="payment-content">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4><i class="bi bi-credit-card"></i> Process Payment</h4>
-                <button class="btn-close" id="closePaymentModal"></button>
-            </div>
-            
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Total Amount: <strong id="paymentTotal">$0.00</strong>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Payment Method</label>
-                <div class="d-flex gap-2 mb-3">
-                    <button class="btn btn-outline-primary active" data-method="card">
-                        <i class="bi bi-credit-card"></i> Card
-                    </button>
-                    <button class="btn btn-outline-success" data-method="cash">
-                        <i class="bi bi-cash"></i> Cash
-                    </button>
-                    <button class="btn btn-outline-info" data-method="room">
-                        <i class="bi bi-building"></i> Room Charge
-                    </button>
-                </div>
-                
-                <div id="cardDetails">
-                    <div class="mb-3">
-                        <label class="form-label">Card Number</label>
-                        <input type="text" class="form-control" placeholder="1234 5678 9012 3456">
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <!-- Restaurant Module -->
+        <div id="restaurant-module" class="module-content active">
+            <div class="pos-container">
+                <div class="pos-left">
+                    <div class="cart-header bg-success">
+                        <h6 class="mb-0"><i class="bi bi-cup-hot"></i> Restaurant POS</h6>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">Expiry Date</label>
-                            <input type="text" class="form-control" placeholder="MM/YY">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">CVV</label>
-                            <input type="text" class="form-control" placeholder="123">
+                    
+                    <div class="room-selector">
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="restaurantRoomSelect">
+                                <option value="">Select Room (Optional)</option>
+                                <option value="101">101 - John Smith</option>
+                                <option value="102">102 - Sarah Johnson</option>
+                                <option value="103">103 - Mike Wilson</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" onclick="attachRestaurantToRoom()">
+                                <i class="bi bi-link"></i> Attach
+                            </button>
                         </div>
                     </div>
+                    
+                    <div class="d-flex align-items-center gap-2 mb-2" id="restaurantSearchWrapper" style="display:flex;">
+                        <input type="search" id="restaurantSearch" class="form-control form-control-sm" placeholder="Search menu (e.g. Bruschetta)">
+                        <button class="btn btn-sm btn-outline-secondary" id="restaurantClearSearch" title="Clear search">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="category-tabs">
+                        <div class="category-tab active" data-category="appetizers">Appetizers</div>
+                        <div class="category-tab" data-category="mains">Main Courses</div>
+                        <div class="category-tab" data-category="desserts">Desserts</div>
+                        <div class="category-tab" data-category="beverages">Beverages</div>
+                        <div class="category-tab" data-category="alcohol">Alcohol</div>
+                    </div>
+                    
+                    <div class="cart-items" id="restaurantCartItems">
+                        <div class="text-center text-muted p-4">
+                            <i class="bi bi-cart-x fs-3"></i>
+                            <p class="mt-2">No food items</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-items-grid" id="restaurantItems">
+                        <!-- Items will load here -->
+                    </div>
                 </div>
                 
-                <div id="cashDetails" style="display: none;">
-                    <div class="mb-3">
-                        <label class="form-label">Amount Tendered</label>
-                        <input type="number" class="form-control" id="cashAmount" step="0.01">
+                <div class="pos-right">
+                    <div class="receipt-container" id="restaurantReceipt">
+                        <div class="receipt-header">
+                            <h6>PAKANAKA RESORT</h6>
+                            <small>Restaurant Bill</small>
+                            <div class="mt-1 text-start">
+                                <small>Table: 12</small><br>
+                                <small>Room: <span id="restaurantReceiptRoom">--</span></small><br>
+                                <small>Time: <span id="restaurantTime">10:30 AM</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="receipt-items" id="restaurantReceiptItems">
+                            <div class="text-center text-muted">--- No items ---</div>
+                        </div>
+                        
+                        <div class="receipt-total">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span id="restaurantSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tax (15%):</span>
+                                <span id="restaurantTax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TOTAL:</span>
+                                <span id="restaurantTotal">$0.00</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="alert alert-success">
-                        Change: <strong id="changeAmount">$0.00</strong>
-                    </div>
-                </div>
-                
-                <div id="roomDetails" style="display: none;">
-                    <div class="mb-3">
-                        <label class="form-label">Room Number</label>
-                        <input type="text" class="form-control" placeholder="Enter room number">
-                    </div>
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> Will be charged to room account
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-action" onclick="printReceipt('restaurant')">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button class="btn btn-success btn-action" onclick="processPayment('restaurant')">
+                            <i class="bi bi-credit-card"></i> Pay
+                        </button>
+
+                        <button class="btn btn-danger btn-action" onclick="clearModuleOrder('restaurant')">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="saveOrder('restaurant')">
+                            <i class="bi bi-save"></i> Save
+                        </button>
                     </div>
                 </div>
             </div>
-            
-            <div class="d-grid gap-2">
-                <button class="btn btn-success btn-lg" id="confirmPayment">
-                    <i class="bi bi-check-circle"></i> Confirm Payment
-                </button>
-                <button class="btn btn-outline-secondary" id="cancelPayment">
-                    Cancel
-                </button>
+        </div>
+        
+
+        <div id="accommodation-module" class="module-content">
+            <div class="pos-container">
+                <div class="pos-left">
+                    <div class="cart-header">
+                        <h6 class="mb-0"><i class="bi bi-building"></i> Accommodation POS</h6>
+                    </div>
+                    
+                    <div class="room-selector">
+                        <select class="form-select form-select-sm" id="accommodationRoomSelect">
+                            <option value="101">101 - Deluxe Ocean View (John Smith)</option>
+                            <option value="102">102 - Suite (Sarah Johnson)</option>
+                            <option value="103">103 - Standard Room (Mike Wilson)</option>
+                            <option value="201">201 - Family Suite (Davis Family)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active" data-category="room-charges">Room Charges</div>
+                        <div class="category-tab" data-category="restaurant-attached">Restaurant Charges</div>
+                        <div class="category-tab" data-category="activities-attached">Activity Charges</div>
+                        <div class="category-tab" data-category="services">Services</div>
+                    </div>
+                    
+                    <div class="cart-items" id="accommodationCartItems">
+                        <div class="text-center text-muted p-4">
+                            <i class="bi bi-cart-x fs-3"></i>
+                            <p class="mt-2">No room charges</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-items-grid" id="accommodationItems">
+                        <!-- Items will load here -->
+                    </div>
+                </div>
+                
+                <div class="pos-right">
+                    <div class="receipt-container" id="accommodationReceipt">
+                        <div class="receipt-header">
+                            <h6>PAKANAKA RESORT</h6>
+                            <small>Room Charges</small>
+                            <div class="mt-1 text-start">
+                                <small>Room: <span id="receiptRoom">101</span></small><br>
+                                <small>Date: <span id="receiptDate">Nov 15, 2023</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="receipt-items" id="accommodationReceiptItems">
+                            <div class="text-center text-muted">--- No charges ---</div>
+                        </div>
+                        
+                        <div class="receipt-total">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span id="accommodationSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tax (15%):</span>
+                                <span id="accommodationTax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TOTAL:</span>
+                                <span id="accommodationTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-action" onclick="printReceipt('accommodation')">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button class="btn btn-success btn-action" onclick="processPayment('accommodation')">
+                            <i class="bi bi-credit-card"></i> Pay
+                        </button>
+                        <button class="btn btn-info btn-action" onclick="emailReceipt('accommodation')">
+                            <i class="bi bi-envelope"></i> Email
+                        </button>
+                        <button class="btn btn-danger btn-action" onclick="clearModuleOrder('accommodation')">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button class="btn btn-warning btn-action" onclick="attachToRoom('accommodation')">
+                            <i class="bi bi-link"></i> Attach
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="viewRoomStatement()">
+                            <i class="bi bi-receipt"></i> Statement
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activities Module -->
+        <div id="activities-module" class="module-content">
+            <div class="pos-container">
+                <div class="pos-left">
+                    <div class="cart-header" style="background: #fd7e14;">
+                        <h6 class="mb-0"><i class="bi bi-bicycle"></i> Activities POS</h6>
+                    </div>
+                    
+                    <div class="room-selector">
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="activitiesRoomSelect">
+                                <option value="">Select Room (Optional)</option>
+                                <option value="101">101 - John Smith</option>
+                                <option value="102">102 - Sarah Johnson</option>
+                                <option value="103">103 - Mike Wilson</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" onclick="attachActivitiesToRoom()">
+                                <i class="bi bi-link"></i> Attach
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active" data-category="water">Water Sports</div>
+                        <div class="category-tab" data-category="adventure">Adventure</div>
+                        <div class="category-tab" data-category="tours">Tours</div>
+                        <div class="category-tab" data-category="equipment">Equipment</div>
+                    </div>
+                    
+                    <div class="cart-items" id="activitiesCartItems">
+                        <div class="text-center text-muted p-4">
+                            <i class="bi bi-cart-x fs-3"></i>
+                            <p class="mt-2">No activities booked</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-items-grid" id="activitiesItems">
+                        <!-- Items will load here -->
+                    </div>
+                </div>
+                
+                <div class="pos-right">
+                    <div class="receipt-container" id="activitiesReceipt">
+                        <div class="receipt-header">
+                            <h6>PAKANAKA RESORT</h6>
+                            <small>Activities Booking</small>
+                            <div class="mt-1 text-start">
+                                <small>Instructor: Alex</small><br>
+                                <small>Room: <span id="activitiesReceiptRoom">--</span></small><br>
+                                <small>Date: <span id="activitiesDate">Nov 15, 2023</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="receipt-items" id="activitiesReceiptItems">
+                            <div class="text-center text-muted">--- No activities ---</div>
+                        </div>
+                        
+                        <div class="receipt-total">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span id="activitiesSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tax (15%):</span>
+                                <span id="activitiesTax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TOTAL:</span>
+                                <span id="activitiesTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-action" onclick="printReceipt('activities')">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button class="btn btn-success btn-action" onclick="processPayment('activities')">
+                            <i class="bi bi-credit-card"></i> Pay
+                        </button>
+                        <button class="btn btn-info btn-action" onclick="scheduleActivity()">
+                            <i class="bi bi-calendar"></i> Schedule
+                        </button>
+                        <button class="btn btn-warning btn-action" onclick="addParticipants()">
+                            <i class="bi bi-people"></i> Participants
+                        </button>
+                        <button class="btn btn-danger btn-action" onclick="clearModuleOrder('activities')">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="saveOrder('activities')">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Events Module -->
+        <div id="events-module" class="module-content">
+            <div class="pos-container">
+                <div class="pos-left">
+                    <div class="cart-header" style="background: #6f42c1;">
+                        <h6 class="mb-0"><i class="bi bi-calendar-event"></i> Events POS</h6>
+                        <small>Weddings • Parties • Celebrations</small>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active" data-category="venues">Venue Rental</div>
+                        <div class="category-tab" data-category="catering">Catering</div>
+                        <div class="category-tab" data-category="decor">Decorations</div>
+                        <div class="category-tab" data-category="packages">Packages</div>
+                    </div>
+                    
+                    <div class="cart-items" id="eventsCartItems">
+                        <div class="text-center text-muted p-4">
+                            <i class="bi bi-cart-x fs-3"></i>
+                            <p class="mt-2">No event items</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-items-grid" id="eventsItems">
+                        <!-- Items will load here -->
+                    </div>
+                </div>
+                
+                <div class="pos-right">
+                    <div class="receipt-container" id="eventsReceipt">
+                        <div class="receipt-header">
+                            <h6>PAKANAKA RESORT</h6>
+                            <small>Events Booking</small>
+                            <div class="mt-1 text-start">
+                                <small>Event Type: <span id="eventType">--</span></small><br>
+                                <small>Date: <span id="eventsDate">Nov 15, 2023</span></small><br>
+                                <small>Guests: <span id="eventGuests">0</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="receipt-items" id="eventsReceiptItems">
+                            <div class="text-center text-muted">--- No items ---</div>
+                        </div>
+                        
+                        <div class="receipt-total">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span id="eventsSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tax (15%):</span>
+                                <span id="eventsTax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TOTAL:</span>
+                                <span id="eventsTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-action" onclick="printReceipt('events')">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button class="btn btn-success btn-action" onclick="processPayment('events')">
+                            <i class="bi bi-credit-card"></i> Pay
+                        </button>
+                        <button class="btn btn-info btn-action" onclick="bookVenue()">
+                            <i class="bi bi-calendar-check"></i> Book Venue
+                        </button>
+                        <button class="btn btn-warning btn-action" onclick="addGuestCount()">
+                            <i class="bi bi-people"></i> Guests
+                        </button>
+                        <button class="btn btn-danger btn-action" onclick="clearModuleOrder('events')">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="saveOrder('events')">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Conferences Module -->
+        <div id="conferences-module" class="module-content">
+            <div class="pos-container">
+                <div class="pos-left">
+                    <div class="cart-header" style="background: #20c997;">
+                        <h6 class="mb-0"><i class="bi bi-people"></i> Conferences POS</h6>
+                        <small>Meetings • Seminars • Corporate Events</small>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active" data-category="rooms">Conference Rooms</div>
+                        <div class="category-tab" data-category="equipment">AV Equipment</div>
+                        <div class="category-tab" data-category="catering">Catering</div>
+                        <div class="category-tab" data-category="services">Services</div>
+                    </div>
+                    
+                    <div class="cart-items" id="conferencesCartItems">
+                        <div class="text-center text-muted p-4">
+                            <i class="bi bi-cart-x fs-3"></i>
+                            <p class="mt-2">No conference items</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-items-grid" id="conferencesItems">
+                        <!-- Items will load here -->
+                    </div>
+                </div>
+                
+                <div class="pos-right">
+                    <div class="receipt-container" id="conferencesReceipt">
+                        <div class="receipt-header">
+                            <h6>PAKANAKA RESORT</h6>
+                            <small>Conference Booking</small>
+                            <div class="mt-1 text-start">
+                                <small>Company: <span id="conferenceCompany">--</span></small><br>
+                                <small>Date: <span id="conferencesDate">Nov 15, 2023</span></small><br>
+                                <small>Attendees: <span id="conferenceAttendees">0</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="receipt-items" id="conferencesReceiptItems">
+                            <div class="text-center text-muted">--- No items ---</div>
+                        </div>
+                        
+                        <div class="receipt-total">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span id="conferencesSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tax (15%):</span>
+                                <span id="conferencesTax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TOTAL:</span>
+                                <span id="conferencesTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-action" onclick="printReceipt('conferences')">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button class="btn btn-success btn-action" onclick="processPayment('conferences')">
+                            <i class="bi bi-credit-card"></i> Pay
+                        </button>
+                        <button class="btn btn-info btn-action" onclick="bookConference()">
+                            <i class="bi bi-calendar-check"></i> Book Room
+                        </button>
+                        <button class="btn btn-warning btn-action" onclick="addAttendees()">
+                            <i class="bi bi-people"></i> Attendees
+                        </button>
+                        <button class="btn btn-danger btn-action" onclick="clearModuleOrder('conferences')">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="saveOrder('conferences')">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Construction Module -->
+        <div id="construction-module" class="module-content">
+            <div class="pos-container">
+                <div class="pos-left">
+                    <div class="cart-header bg-dark">
+                        <h6 class="mb-0"><i class="bi bi-tools"></i> Construction POS</h6>
+                        <small>Materials • Labor • Contractor Services</small>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active" data-category="materials">Materials</div>
+                        <div class="category-tab" data-category="labor">Labor</div>
+                        <div class="category-tab" data-category="equipment">Equipment</div>
+                        <div class="category-tab" data-category="services">Services</div>
+                    </div>
+                    
+                    <div class="cart-items" id="constructionCartItems">
+                        <div class="text-center text-muted p-4">
+                            <i class="bi bi-cart-x fs-3"></i>
+                            <p class="mt-2">No construction items</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-items-grid" id="constructionItems">
+                        <!-- Items will load here -->
+                    </div>
+                </div>
+                
+                <div class="pos-right">
+                    <div class="receipt-container" id="constructionReceipt">
+                        <div class="receipt-header">
+                            <h6>PAKANAKA RESORT</h6>
+                            <small>Construction Services</small>
+                            <div class="mt-1 text-start">
+                                <small>Project: <span id="constructionProject">--</span></small><br>
+                                <small>Date: <span id="constructionDate">Nov 15, 2023</span></small><br>
+                                <small>Contractor: <span id="constructionContractor">--</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="receipt-items" id="constructionReceiptItems">
+                            <div class="text-center text-muted">--- No items ---</div>
+                        </div>
+                        
+                        <div class="receipt-total">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span id="constructionSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tax (15%):</span>
+                                <span id="constructionTax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TOTAL:</span>
+                                <span id="constructionTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-action" onclick="printReceipt('construction')">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button class="btn btn-success btn-action" onclick="processPayment('construction')">
+                            <i class="bi bi-credit-card"></i> Pay
+                        </button>
+                        <button class="bi bi-tools"></i> Project
+                        </button>
+                        <button class="btn btn-warning btn-action" onclick="addContractor()">
+                            <i class="bi bi-person"></i> Contractor
+                        </button>
+                        <button class="btn btn-danger btn-action" onclick="clearModuleOrder('construction')">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="saveOrder('construction')">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Payment Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-1">
+                    <h6 class="modal-title" id="paymentModalTitle">Process Payment</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-2">
+                    <div class="alert alert-info py-1 mb-2">
+                        <small>Total: <strong id="paymentTotal">$0.00</strong></small>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select form-select-sm" id="paymentMethod">
+                            <option>Credit Card</option>
+                            <option>Cash</option>
+                            <option>Room Charge</option>
+                            <option>Resort Credit</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2" id="paymentSendToKitchenRow" style="display:none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="paymentSendToKitchen">
+                            <label class="form-check-label" for="paymentSendToKitchen">Send to Kitchen</label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-1">
+                        <button class="btn btn-success btn-sm" onclick="confirmPayment()">
+                            <i class="bi bi-check-circle"></i> Confirm Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Module -->
+    <div id="settings-module" class="module-content">
+        <div class="container p-3">
+            <h5>Settings</h5>
+            <ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="settings-restaurant-tab" data-bs-toggle="tab" data-bs-target="#settings-restaurant" type="button" role="tab">Restaurant Items</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="settings-rooms-tab" data-bs-toggle="tab" data-bs-target="#settings-rooms" type="button" role="tab">Rooms</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="settings-inventory-tab" data-bs-toggle="tab" data-bs-target="#settings-inventory" type="button" role="tab">Inventory</button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="settings-restaurant" role="tabpanel">
+                    <form id="restaurantItemForm" class="row g-2 mb-3">
+                        <div class="col-5">
+                            <input type="text" id="newRestaurantItemName" class="form-control form-control-sm" placeholder="Item name">
+                        </div>
+                        <div class="col-3">
+                            <input type="number" id="newRestaurantItemPrice" class="form-control form-control-sm" placeholder="Price">
+                        </div>
+                        <div class="col-3">
+                            <select id="newRestaurantItemCategory" class="form-select form-select-sm">
+                                <option value="appetizers">Appetizers</option>
+                                <option value="mains">Main Courses</option>
+                                <option value="desserts">Desserts</option>
+                                <option value="beverages">Beverages</option>
+                                <option value="alcohol">Alcohol</option>
+                            </select>
+                        </div>
+                        <div class="col-1">
+                            <button class="btn btn-sm btn-primary" type="button" onclick="addRestaurantItemFromSettings()">Add</button>
+                        </div>
+                    </form>
+
+                    <div id="settingsRestaurantList"></div>
+                </div>
+
+                <div class="tab-pane fade" id="settings-rooms" role="tabpanel">
+                    <form id="roomsForm" class="row g-2 mb-3">
+                        <div class="col-4">
+                            <input type="text" id="newRoomValue" class="form-control form-control-sm" placeholder="Room number (e.g. 104)">
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="newRoomLabel" class="form-control form-control-sm" placeholder="Label (e.g. 104 - Twin)">
+                        </div>
+                        <div class="col-2">
+                            <button class="btn btn-sm btn-primary" type="button" onclick="addRoomFromSettings()">Add</button>
+                        </div>
+                    </form>
+
+                    <div id="settingsRoomsList"></div>
+                </div>
+
+                <div class="tab-pane fade" id="settings-inventory" role="tabpanel">
+                    <form id="inventoryForm" class="row g-2 mb-3">
+                        <div class="col-6">
+                            <input type="text" id="newInventoryName" class="form-control form-control-sm" placeholder="Item name">
+                        </div>
+                        <div class="col-4">
+                            <input type="number" id="newInventoryQty" class="form-control form-control-sm" placeholder="Qty">
+                        </div>
+                        <div class="col-2">
+                            <button class="btn btn-sm btn-primary" type="button" onclick="addInventoryFromSettings()">Add</button>
+                        </div>
+                    </form>
+
+                    <div id="settingsInventoryList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Sample menu items
-        const menuItems = [
-            { id: 1, name: "Cocktail", price: 12.00, category: "Bar" },
-            { id: 2, name: "Local Beer", price: 8.00, category: "Bar" },
-            { id: 3, name: "Resort Burger", price: 18.00, category: "Food" },
-            { id: 4, name: "Garden Salad", price: 14.00, category: "Food" },
-            { id: 5, name: "Premium Coffee", price: 5.00, category: "Beverage" },
-            { id: 6, name: "Fresh Juice", price: 7.00, category: "Beverage" },
-            { id: 7, name: "Pasta Special", price: 22.00, category: "Food" },
-            { id: 8, name: "Wine Glass", price: 15.00, category: "Bar" }
-        ];
+        // Data structure for all modules
+        const moduleData = {
+            accommodation: {
+                items: [],
+                categories: ['room-charges', 'restaurant-attached', 'activities-attached', 'services'],
+                selectedRoom: '101',
+                itemsList: {
+                    'room-charges': [
+                        { name: "Room Night", price: 299, icon: "bi-moon" },
+                        { name: "Late Check-out", price: 75, icon: "bi-clock" },
+                        { name: "Early Check-in", price: 50, icon: "bi-sun" }
+                    ],
+                    'restaurant-attached': [
+                        { name: "Restaurant Bill", price: 0, icon: "bi-cup-hot" },
+                        { name: "Room Service", price: 15, icon: "bi-bell" },
+                        { name: "Mini-bar Refill", price: 45, icon: "bi-cup-straw" }
+                    ],
+                    'activities-attached': [
+                        { name: "Activity Ticket", price: 0, icon: "bi-ticket" },
+                        { name: "Tour Booking", price: 0, icon: "bi-compass" },
+                        { name: "Equipment Rental", price: 0, icon: "bi-bicycle" }
+                    ],
+                    'services': [
+                        { name: "Laundry Service", price: 35, icon: "bi-bucket" },
+                        { name: "Spa Treatment", price: 85, icon: "bi-spa" },
+                        { name: "Butler Service", price: 100, icon: "bi-person" }
+                    ]
+                },
+                rooms: [
+                    { value: '101', label: '101 - Deluxe Ocean View (John Smith)' },
+                    { value: '102', label: '102 - Suite (Sarah Johnson)' },
+                    { value: '103', label: '103 - Standard Room (Mike Wilson)' },
+                    { value: '201', label: '201 - Family Suite (Davis Family)' }
+                ]
+            },
+            restaurant: {
+                items: [],
+                categories: ['appetizers', 'mains', 'desserts', 'beverages', 'alcohol'],
+                attachedRoom: '',
+                itemsList: {
+                    'appetizers': [
+                        { name: "Bruschetta", price: 12, icon: "bi-bread-slice" },
+                        { name: "Calamari", price: 16, icon: "bi-fish" },
+                        { name: "Garlic Bread", price: 8, icon: "bi-bread-slice" }
+                    ],
+                    'mains': [
+                        { name: "Grilled Salmon", price: 28, icon: "bi-fish" },
+                        { name: "Ribeye Steak", price: 42, icon: "bi-egg-fried" },
+                        { name: "Vegetable Pasta", price: 22, icon: "bi-egg" }
+                    ],
+                    'desserts': [
+                        { name: "Chocolate Cake", price: 12, icon: "bi-cake" },
+                        { name: "Ice Cream", price: 8, icon: "bi-snow" },
+                        { name: "Cheese Plate", price: 16, icon: "bi-egg" }
+                    ],
+                    'beverages': [
+                        { name: "Fresh Juice", price: 6, icon: "bi-cup-straw" },
+                        { name: "Soft Drink", price: 4, icon: "bi-cup" },
+                        { name: "Coffee", price: 5, icon: "bi-cup-hot" }
+                    ],
+                    'alcohol': [
+                        { name: "House Wine", price: 9, icon: "bi-cup-straw" },
+                        { name: "Cocktail", price: 14, icon: "bi-cup-straw" },
+                        { name: "Local Beer", price: 7, icon: "bi-cup" }
+                    ]
+                }
+            },
+            activities: {
+                items: [],
+                categories: ['water', 'adventure', 'tours', 'equipment'],
+                attachedRoom: '',
+                itemsList: {
+                    'water': [
+                        { name: "Jet Ski Rental", price: 85, icon: "bi-water" },
+                        { name: "Scuba Diving", price: 120, icon: "bi-water" },
+                        { name: "Snorkeling", price: 45, icon: "bi-water" }
+                    ],
+                    'adventure': [
+                        { name: "Zip Lining", price: 65, icon: "bi-activity" },
+                        { name: "Rock Climbing", price: 55, icon: "bi-activity" },
+                        { name: "Canoeing", price: 40, icon: "bi-activity" }
+                    ],
+                    'tours': [
+                        { name: "Island Tour", price: 65, icon: "bi-compass" },
+                        { name: "PAKANAKA Cruise", price: 90, icon: "bi-compass" },
+                        { name: "City Excursion", price: 55, icon: "bi-compass" }
+                    ],
+                    'equipment': [
+                        { name: "Bike Rental", price: 20, icon: "bi-bicycle" },
+                        { name: "Kayak Rental", price: 30, icon: "bi-bicycle" },
+                        { name: "Snorkel Gear", price: 15, icon: "bi-bicycle" }
+                    ]
+                }
+            },
+            events: {
+                items: [],
+                categories: ['venues', 'catering', 'decor', 'packages']
+            },
+            conferences: {
+                items: [],
+                categories: ['rooms', 'equipment', 'catering', 'services']
+            },
+            construction: {
+                items: [],
+                categories: ['materials', 'labor', 'equipment', 'services']
+            },
+            inventory: {
+                items: [
+                    { name: 'Napkins', qty: 200 },
+                    { name: 'Olive Oil', qty: 25 }
+                ]
+            }
+        }
 
-        // Current order
-        let currentOrder = {
-            items: [],
-            subtotal: 0,
-            tax: 0,
-            serviceCharge: 0,
-            total: 0,
-            orderNumber: "RES-" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0'),
-            status: "pending"
-        };
-
-        // DOM Elements
-        const cartItems = document.getElementById('cartItems');
-        const receiptItems = document.getElementById('receiptItems');
-        const subtotalEl = document.getElementById('subtotal');
-        const taxAmountEl = document.getElementById('taxAmount');
-        const totalAmountEl = document.getElementById('totalAmount');
-        const receiptSubtotal = document.getElementById('receiptSubtotal');
-        const receiptTax = document.getElementById('receiptTax');
-        const receiptTotal = document.getElementById('receiptTotal');
-        const paymentModal = document.getElementById('paymentModal');
-        const processPaymentBtn = document.getElementById('processPayment');
-        const closePaymentModal = document.getElementById('closePaymentModal');
-        const cancelPayment = document.getElementById('cancelPayment');
-        const confirmPaymentBtn = document.getElementById('confirmPayment');
-        const printReceiptBtn = document.getElementById('printReceipt');
-        const clearOrderBtn = document.getElementById('clearOrder');
-        const emailReceiptBtn = document.getElementById('emailReceipt');
-        const saveOrderBtn = document.getElementById('saveOrder');
-        const orderNumberEl = document.getElementById('orderNumber');
-        const cashAmountInput = document.getElementById('cashAmount');
-        const changeAmountEl = document.getElementById('changeAmount');
-        const paymentTotalEl = document.getElementById('paymentTotal');
+        const VAT_RATE = 0.15;
+        let currentModule = 'accommodation';
+        let currentCategory = 'room-charges';
+        const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
 
         // Initialize
         function init() {
             updateDateTime();
-            updateReceiptHeader();
             setupEventListeners();
-            loadQuickItems();
+
+            // Wire restaurant search handlers (if the element exists)
+            const searchInput = document.getElementById('restaurantSearch');
+            if (searchInput) {
+                let t = null;
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(t);
+                    t = setTimeout(() => loadCurrentModuleItems(), 200);
+                });
+                const clearBtn = document.getElementById('restaurantClearSearch');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', () => {
+                        searchInput.value = '';
+                        searchInput.focus();
+                        loadCurrentModuleItems();
+                    });
+                }
+            }
+
+            // Detect which module is active in the UI and set JS state to match
+            const activeSidebar = document.querySelector('.sidebar-item.active');
+            const activeModuleEl = document.querySelector('.module-content.active');
+            if (activeSidebar && activeSidebar.dataset.module) {
+                currentModule = activeSidebar.dataset.module;
+                currentCategory = moduleData[currentModule] && moduleData[currentModule].categories ? moduleData[currentModule].categories[0] : currentCategory;
+            } else if (activeModuleEl) {
+                const moduleId = activeModuleEl.id.replace('-module', '');
+                if (moduleData[moduleId]) {
+                    currentModule = moduleId;
+                    currentCategory = moduleData[currentModule] && moduleData[currentModule].categories ? moduleData[currentModule].categories[0] : currentCategory;
+                }
+            }
+
+            // Ensure restaurant search visibility matches the detected active module
+            const searchWrapper = document.getElementById('restaurantSearchWrapper');
+            if (searchWrapper) {
+                if (currentModule === 'restaurant') {
+                    searchWrapper.style.display = 'flex';
+                } else {
+                    searchWrapper.style.display = 'none';
+                    const searchInput = document.getElementById('restaurantSearch');
+                    if (searchInput) searchInput.value = '';
+                }
+            }
+
+            loadCurrentModuleItems();
+            updateCartDisplay();
+            updateReceipt();
         }
 
-        // Update date and time
         function updateDateTime() {
             const now = new Date();
-            const dateStr = now.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
+            document.querySelectorAll('#receiptDate, #restaurantTime, #activitiesDate, #eventsDate, #conferencesDate, #constructionDate').forEach(el => {
+                if (el.id.includes('Date')) {
+                    el.textContent = now.toLocaleDateString('en-US', { 
+                        month: 'short', day: 'numeric', year: 'numeric' 
+                    });
+                } else if (el.id === 'restaurantTime') {
+                    el.textContent = now.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', minute: '2-digit' 
+                    });
+                }
             });
-            const timeStr = now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            document.getElementById('orderTime').textContent = timeStr;
-            document.getElementById('receiptDate').textContent = dateStr;
-            document.getElementById('receiptTime').textContent = timeStr;
         }
 
-        function updateReceiptHeader() {
-            orderNumberEl.textContent = currentOrder.orderNumber;
-        }
-
-        // Setup event listeners
         function setupEventListeners() {
-            // Quick items
-            document.querySelectorAll('.quick-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const name = item.dataset.item;
-                    const price = parseFloat(item.dataset.price);
-                    addToCart(name, price);
-                });
-            });
-
-            // Payment buttons
-            processPaymentBtn.addEventListener('click', openPaymentModal);
-            closePaymentModal.addEventListener('click', closePaymentModalFunc);
-            cancelPayment.addEventListener('click', closePaymentModalFunc);
-            confirmPaymentBtn.addEventListener('click', processPayment);
-            
-            // Action buttons
-            printReceiptBtn.addEventListener('click', printReceipt);
-            clearOrderBtn.addEventListener('click', clearOrder);
-            emailReceiptBtn.addEventListener('click', emailReceipt);
-            saveOrderBtn.addEventListener('click', saveOrder);
-
-            // Payment method buttons
-            document.querySelectorAll('[data-method]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('[data-method]').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    showPaymentMethod(this.dataset.method);
-                });
-            });
-
-            // Numeric keypad
-            document.querySelectorAll('.num-key').forEach(key => {
-                key.addEventListener('click', function() {
-                    const value = this.dataset.value;
-                    if (paymentModal.style.display === 'block') {
-                        handleKeypadInput(value);
+            // Sidebar navigation
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const module = item.dataset.module;
+                    
+                    if (module === 'settings' || item.id === 'settingsBtn') {
+                        openSettingsModal();
+                        return;
                     }
+                    
+                    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    document.querySelectorAll('.module-content').forEach(m => m.classList.remove('active'));
+                    document.getElementById(`${module}-module`).classList.add('active');
+                    
+                    currentModule = module;
+                    currentCategory = moduleData[module].categories[0];
+
+                    // show or hide restaurant search when switching modules
+                    const searchWrapper = document.getElementById('restaurantSearchWrapper');
+                    const searchInput = document.getElementById('restaurantSearch');
+                    if (searchWrapper) {
+                        if (module === 'restaurant') {
+                            searchWrapper.style.display = 'flex';
+                        } else {
+                            searchWrapper.style.display = 'none';
+                            if (searchInput) searchInput.value = '';
+                        }
+                    }
+
+                    loadCurrentModuleItems();
+                    updateCartDisplay();
                 });
             });
 
-            document.getElementById('backspace').addEventListener('click', handleBackspace);
+            // Category tabs
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const category = this.dataset.category;
+                    
+                    this.parentElement.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    currentCategory = category;
+                    loadCurrentModuleItems();
+                });
+            });
 
-            // Cash amount input
-            cashAmountInput.addEventListener('input', calculateChange);
+            // Room selection for accommodation
+            document.getElementById('accommodationRoomSelect')?.addEventListener('change', function() {
+                moduleData.accommodation.selectedRoom = this.value;
+                document.getElementById('receiptRoom').textContent = this.value;
+                updateCartDisplay();
+            });
+
+            // Room selection for restaurant
+            document.getElementById('restaurantRoomSelect')?.addEventListener('change', function() {
+                moduleData.restaurant.attachedRoom = this.value;
+                document.getElementById('restaurantReceiptRoom').textContent = this.value || '--';
+            });
+
+            // Room selection for activities
+            document.getElementById('activitiesRoomSelect')?.addEventListener('change', function() {
+                moduleData.activities.attachedRoom = this.value;
+                document.getElementById('activitiesReceiptRoom').textContent = this.value || '--';
+            });
         }
 
-        // Load quick items
-        function loadQuickItems() {
-            // Already hardcoded in HTML
+        function loadCurrentModuleItems() {
+            const module = moduleData[currentModule];
+            const itemsContainer = document.getElementById(`${currentModule}Items`);
+            
+            if (!itemsContainer || !module.itemsList || !module.itemsList[currentCategory]) return;
+            
+            // Read restaurant search if present
+            const searchEl = document.getElementById('restaurantSearch');
+            const search = (searchEl && searchEl.value) ? searchEl.value.trim().toLowerCase() : '';
+            
+            itemsContainer.innerHTML = '';
+            
+            module.itemsList[currentCategory].forEach(item => {
+                // If searching in restaurant module, filter by name
+                if (currentModule === 'restaurant' && search) {
+                    if (!item.name.toLowerCase().includes(search)) return;
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'quick-item-card';
+                itemDiv.innerHTML = `
+                    <i class="bi ${item.icon} fs-5"></i>
+                    <div class="mt-1">${item.name}</div>
+                    <div class="quick-item-price">${item.price === 0 ? 'Variable' : `$${item.price.toFixed(2)}`}</div>
+                `;
+                itemDiv.tabIndex = 0;
+                itemDiv.addEventListener('click', () => addToCart(item.name, item.price));
+                itemDiv.addEventListener('keydown', (e) => { if (e.key === 'Enter') addToCart(item.name, item.price); });
+                itemsContainer.appendChild(itemDiv);
+            });
         }
 
-        // Add item to cart
-        function addToCart(name, price) {
-            const existingItem = currentOrder.items.find(item => item.name === name);
+        function addToCart(itemName, itemPrice) {
+            const module = moduleData[currentModule];
+            const existingItem = module.items.find(item => item.name === itemName);
             
             if (existingItem) {
                 existingItem.quantity++;
             } else {
-                currentOrder.items.push({
-                    name: name,
-                    price: price,
+                module.items.push({
+                    name: itemName,
+                    price: itemPrice,
                     quantity: 1,
-                    id: Date.now()
+                    module: currentModule
                 });
             }
             
             updateCartDisplay();
-            updateReceiptDisplay();
-            calculateTotals();
-            
-            // Animation
-            const cartItem = document.querySelector(`[data-item-id="${name}"]`);
-            if (cartItem) {
-                cartItem.classList.add('cart-item-added');
-                setTimeout(() => cartItem.classList.remove('cart-item-added'), 300);
-            }
+            updateReceipt();
         }
 
-        // Update cart display
         function updateCartDisplay() {
-            if (currentOrder.items.length === 0) {
-                cartItems.innerHTML = `
-                    <div class="text-center text-muted p-5">
-                        <i class="bi bi-cart-x fs-1"></i>
-                        <p class="mt-3">No items in cart</p>
+            const module = moduleData[currentModule];
+            const cartContainer = document.getElementById(`${currentModule}CartItems`);
+            
+            if (!cartContainer) return;
+            
+            if (module.items.length === 0) {
+                cartContainer.innerHTML = `
+                    <div class="text-center text-muted p-4">
+                        <i class="bi bi-cart-x fs-3"></i>
+                        <p class="mt-2">No items</p>
                     </div>
                 `;
                 return;
             }
 
-            cartItems.innerHTML = currentOrder.items.map(item => `
-                <div class="cart-item d-flex justify-content-between align-items-center" data-item-id="${item.name}">
+            cartContainer.innerHTML = module.items.map(item => `
+                <div class="cart-item d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="mb-1">${item.name}</h6>
-                        <small class="text-muted">$${item.price.toFixed(2)} each</small>
+                        <strong>${item.name}</strong><br>
+                        ${item.price > 0 ? `<small class="text-muted">$${item.price.toFixed(2)} each</small>` : ''}
                     </div>
                     <div class="d-flex align-items-center">
-                        <div class="btn-group btn-group-sm me-3">
+                        <div class="btn-group btn-group-sm me-2">
                             <button class="btn btn-outline-secondary" onclick="updateQuantity('${item.name}', -1)">
                                 <i class="bi bi-dash"></i>
                             </button>
-                            <span class="btn btn-light item-quantity">${item.quantity}</span>
+                            <input type="number" 
+                                   class="form-control item-quantity" 
+                                   value="${item.quantity}" 
+                                   min="1"
+                                   onchange="updateQuantityInput('${item.name}', this.value)">
                             <button class="btn btn-outline-secondary" onclick="updateQuantity('${item.name}', 1)">
                                 <i class="bi bi-plus"></i>
                             </button>
                         </div>
-                        <h6 class="mb-0">$${(item.price * item.quantity).toFixed(2)}</h6>
-                        <button class="btn btn-link text-danger ms-2" onclick="removeItem('${item.name}')">
+                        <h6 class="mb-0 me-2">${item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : 'Variable'}</h6>
+                        <button class="btn btn-link text-danger p-0" onclick="removeItem('${item.name}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
                 </div>
             `).join('');
+            
+            updateModuleTotals();
         }
 
-        // Update receipt display
-        function updateReceiptDisplay() {
-            if (currentOrder.items.length === 0) {
-                receiptItems.innerHTML = `
-                    <div class="text-center text-muted">
-                        --- No items ---
-                    </div>
-                `;
-                return;
-            }
-
-            receiptItems.innerHTML = currentOrder.items.map(item => `
-                <div class="receipt-item">
-                    <div>
-                        ${item.name} x${item.quantity}
-                    </div>
-                    <div>$${(item.price * item.quantity).toFixed(2)}</div>
-                </div>
-            `).join('');
-        }
-
-        // Calculate totals
-        function calculateTotals() {
-            currentOrder.subtotal = currentOrder.items.reduce((sum, item) => 
-                sum + (item.price * item.quantity), 0);
-            
-            currentOrder.tax = currentOrder.subtotal * 0.08;
-            currentOrder.serviceCharge = currentOrder.subtotal * 0.10;
-            currentOrder.total = currentOrder.subtotal + currentOrder.tax + currentOrder.serviceCharge;
-
-            // Update UI
-            subtotalEl.textContent = `$${currentOrder.subtotal.toFixed(2)}`;
-            taxAmountEl.textContent = `$${currentOrder.tax.toFixed(2)}`;
-            totalAmountEl.textContent = `$${currentOrder.total.toFixed(2)}`;
-            
-            receiptSubtotal.textContent = `$${currentOrder.subtotal.toFixed(2)}`;
-            receiptTax.textContent = `$${currentOrder.tax.toFixed(2)}`;
-            receiptTotal.textContent = `$${currentOrder.total.toFixed(2)}`;
-            
-            paymentTotalEl.textContent = `$${currentOrder.total.toFixed(2)}`;
-        }
-
-        // Update item quantity
         function updateQuantity(itemName, change) {
-            const item = currentOrder.items.find(i => i.name === itemName);
+            const module = moduleData[currentModule];
+            const item = module.items.find(i => i.name === itemName);
+            
             if (item) {
                 item.quantity += change;
                 if (item.quantity <= 0) {
                     removeItem(itemName);
                 } else {
                     updateCartDisplay();
-                    updateReceiptDisplay();
-                    calculateTotals();
+                    updateReceipt();
                 }
             }
         }
 
-        // Remove item from cart
+        function updateQuantityInput(itemName, newQuantity) {
+            const quantity = parseInt(newQuantity);
+            if (quantity > 0) {
+                const module = moduleData[currentModule];
+                const item = module.items.find(i => i.name === itemName);
+                if (item) {
+                    item.quantity = quantity;
+                    updateCartDisplay();
+                    updateReceipt();
+                }
+            }
+        }
+
         function removeItem(itemName) {
-            currentOrder.items = currentOrder.items.filter(item => item.name !== itemName);
+            const module = moduleData[currentModule];
+            module.items = module.items.filter(item => item.name !== itemName);
             updateCartDisplay();
-            updateReceiptDisplay();
-            calculateTotals();
+            updateReceipt();
         }
 
-        // Payment Modal Functions
-        function openPaymentModal() {
-            if (currentOrder.items.length === 0) {
-                alert('Please add items to cart first');
+        function updateModuleTotals() {
+            const module = moduleData[currentModule];
+            module.subtotal = module.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            module.tax = module.subtotal * VAT_RATE;
+            module.total = module.subtotal + module.tax;
+            
+            // Update UI
+            document.getElementById(`${currentModule}Subtotal`).textContent = `$${module.subtotal.toFixed(2)}`;
+            document.getElementById(`${currentModule}Tax`).textContent = `$${module.tax.toFixed(2)}`;
+            document.getElementById(`${currentModule}Total`).textContent = `$${module.total.toFixed(2)}`;
+        }
+
+        function updateReceipt() {
+            const module = moduleData[currentModule];
+            const receiptContainer = document.getElementById(`${currentModule}ReceiptItems`);
+            
+            if (!receiptContainer) return;
+            
+            if (module.items.length === 0) {
+                receiptContainer.innerHTML = '<div class="text-center text-muted">--- No items ---</div>';
                 return;
             }
-            paymentModal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closePaymentModalFunc() {
-            paymentModal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        function showPaymentMethod(method) {
-            document.getElementById('cardDetails').style.display = 'none';
-            document.getElementById('cashDetails').style.display = 'none';
-            document.getElementById('roomDetails').style.display = 'none';
             
-            if (method === 'card') {
-                document.getElementById('cardDetails').style.display = 'block';
-            } else if (method === 'cash') {
-                document.getElementById('cashDetails').style.display = 'block';
-                cashAmountInput.value = currentOrder.total.toFixed(2);
-                calculateChange();
-            } else if (method === 'room') {
-                document.getElementById('roomDetails').style.display = 'block';
-            }
-        }
-
-        function handleKeypadInput(value) {
-            const activeInput = document.querySelector('#paymentModal input:focus');
-            if (activeInput && activeInput.id === 'cashAmount') {
-                if (value === '.') {
-                    if (!activeInput.value.includes('.')) {
-                        activeInput.value += value;
-                    }
-                } else {
-                    activeInput.value += value;
-                }
-                calculateChange();
-            }
-        }
-
-        function handleBackspace() {
-            const activeInput = document.querySelector('#paymentModal input:focus');
-            if (activeInput && activeInput.id === 'cashAmount') {
-                activeInput.value = activeInput.value.slice(0, -1);
-                calculateChange();
-            }
-        }
-
-        function calculateChange() {
-            const cashAmount = parseFloat(cashAmountInput.value) || 0;
-            const change = cashAmount - currentOrder.total;
-            changeAmountEl.textContent = `$${change.toFixed(2)}`;
+            receiptContainer.innerHTML = module.items.map(item => `
+                <div class="receipt-item">
+                    <div>${item.name} x${item.quantity}</div>
+                    <div>${item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : 'Variable'}</div>
+                </div>
+            `).join('');
             
-            if (change < 0) {
-                changeAmountEl.style.color = '#dc3545';
+            updateModuleTotals();
+        }
+
+        // Action Functions
+        function attachRestaurantToRoom() {
+            const roomSelect = document.getElementById('restaurantRoomSelect');
+            const room = roomSelect.value;
+            
+            if (!room) {
+                alert('Please select a room first');
+                return;
+            }
+            
+            moduleData.restaurant.attachedRoom = room;
+            document.getElementById('restaurantReceiptRoom').textContent = room;
+            alert(`Restaurant bill attached to Room ${room}`);
+        }
+
+        function attachActivitiesToRoom() {
+            const roomSelect = document.getElementById('activitiesRoomSelect');
+            const room = roomSelect.value;
+            
+            if (!room) {
+                alert('Please select a room first');
+                return;
+            }
+            
+            moduleData.activities.attachedRoom = room;
+            document.getElementById('activitiesReceiptRoom').textContent = room;
+            alert(`Activities attached to Room ${room}`);
+        }
+
+        function attachToRoom(module) {
+            if (module === 'restaurant') {
+                attachRestaurantToRoom();
+            } else if (module === 'activities') {
+                attachActivitiesToRoom();
             } else {
-                changeAmountEl.style.color = '#198754';
+                alert('Attached to room successfully');
             }
         }
 
-        function processPayment() {
-            // In a real app, this would process payment via API
-            alert('Payment processed successfully!');
-            
-            // Mark order as paid
-            currentOrder.status = 'paid';
-            currentOrder.paidAt = new Date().toISOString();
-            
-            // Print receipt
-            printReceipt();
-            
-            // Close modal and clear order
-            closePaymentModalFunc();
-            setTimeout(clearOrder, 1000);
-        }
-
-        function printReceipt() {
-            if (currentOrder.items.length === 0) {
-                alert('No items to print');
+        function processPayment(module) {
+            const mod = moduleData[module];
+            if (mod.items.length === 0) {
+                alert(`No items to pay for in ${module}`);
                 return;
             }
             
+            document.getElementById('paymentTotal').textContent = `$${mod.total.toFixed(2)}`;
+            document.getElementById('paymentModalTitle').textContent = `${module.charAt(0).toUpperCase() + module.slice(1)} Payment`;
+
+            // Show kitchen option only for restaurant
+            const kitchenRow = document.getElementById('paymentSendToKitchenRow');
+            const kitchenCheckbox = document.getElementById('paymentSendToKitchen');
+            if (kitchenRow) {
+                if (module === 'restaurant') {
+                    kitchenRow.style.display = 'block';
+                    if (kitchenCheckbox) kitchenCheckbox.checked = false;
+                } else {
+                    kitchenRow.style.display = 'none';
+                }
+            }
+
+            // set the current module to the module being paid
+            currentModule = module;
+
+            paymentModal.show();
+        }
+
+        function confirmPayment() {
+            const mod = moduleData[currentModule];
+            const kitchenCheckbox = document.getElementById('paymentSendToKitchen');
+            if (kitchenCheckbox && kitchenCheckbox.checked && currentModule === 'restaurant') {
+                addToKitchen();
+            }
+
+            alert(`Payment of $${mod.total.toFixed(2)} processed successfully!`);
+            clearModuleOrder(currentModule);
+            paymentModal.hide();
+        }
+
+        function printReceipt(module) {
+            const mod = moduleData[module];
+            if (mod.items.length === 0) {
+                alert(`No items to print for ${module}`);
+                return;
+            }
+            
+            const receiptContent = document.getElementById(`${module}Receipt`).innerHTML;
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Receipt - ${currentOrder.orderNumber}</title>
+                    <title>${module.charAt(0).toUpperCase() + module.slice(1)} Receipt</title>
                     <style>
-                        body { 
-                            font-family: 'Courier New', monospace; 
-                            width: 300px;
-                            margin: 0 auto;
-                            padding: 20px;
-                        }
-                        .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px; }
+                        body { font-family: 'Courier New', monospace; padding: 20px; max-width: 300px; margin: 0 auto; }
+                        .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; }
                         .item { display: flex; justify-content: space-between; margin: 5px 0; }
-                        .total { border-top: 2px dashed #000; padding-top: 10px; margin-top: 15px; font-weight: bold; }
-                        .footer { text-align: center; margin-top: 20px; font-size: 12px; }
-                        @media print { 
-                            body { width: 100%; }
-                            button { display: none; }
-                        }
+                        .total { border-top: 1px dashed #000; padding-top: 10px; margin-top: 15px; font-weight: bold; }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <h3>SUNSET RESORT & SPA</h3>
-                        <p>123 Ocean Drive, Paradise Island</p>
-                        <p>Tel: (123) 456-7890</p>
-                        <hr>
-                        <p>Date: ${document.getElementById('receiptDate').textContent}</p>
-                        <p>Time: ${document.getElementById('receiptTime').textContent}</p>
-                        <p>Order #: ${currentOrder.orderNumber}</p>
-                    </div>
-                    
-                    <div class="items">
-                        ${currentOrder.items.map(item => `
-                            <div class="item">
-                                <span>${item.name} x${item.quantity}</span>
-                                <span>$${(item.price * item.quantity).toFixed(2)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="total">
-                        <div class="item">
-                            <span>Subtotal:</span>
-                            <span>$${currentOrder.subtotal.toFixed(2)}</span>
-                        </div>
-                        <div class="item">
-                            <span>Tax (8%):</span>
-                            <span>$${currentOrder.tax.toFixed(2)}</span>
-                        </div>
-                        <div class="item">
-                            <span>Service (10%):</span>
-                            <span>$${currentOrder.serviceCharge.toFixed(2)}</span>
-                        </div>
-                        <div class="item">
-                            <strong>TOTAL:</strong>
-                            <strong>$${currentOrder.total.toFixed(2)}</strong>
-                        </div>
-                    </div>
-                    
-                    <div class="footer">
-                        <p>*** PAID ***</p>
-                        <p>Thank you for visiting!</p>
-                        <p>For inquiries: info@sunsetresort.com</p>
-                    </div>
-                    
-                    <button onclick="window.print()" style="position:fixed;top:20px;right:20px;padding:10px;background:#007bff;color:white;border:none;border-radius:5px;">
+                    ${receiptContent}
+                    <button onclick="window.print()" style="margin-top: 20px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px;">
                         Print Receipt
                     </button>
                 </body>
@@ -933,53 +1533,229 @@
             printWindow.document.close();
         }
 
-        function clearOrder() {
-            if (confirm('Are you sure you want to clear the current order?')) {
-                currentOrder.items = [];
-                currentOrder.subtotal = 0;
-                currentOrder.tax = 0;
-                currentOrder.serviceCharge = 0;
-                currentOrder.total = 0;
-                currentOrder.orderNumber = "RES-" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-                currentOrder.status = "pending";
-                
+        function clearModuleOrder(module) {
+            if (confirm(`Clear all items from ${module}?`)) {
+                moduleData[module].items = [];
                 updateCartDisplay();
-                updateReceiptDisplay();
-                calculateTotals();
-                updateReceiptHeader();
-                
-                alert('Order cleared. New order started.');
+                updateReceipt();
             }
         }
 
-        function emailReceipt() {
-            if (currentOrder.items.length === 0) {
-                alert('No items to email');
+        function emailReceipt(module) {
+            const mod = moduleData[module];
+            if (mod.items.length === 0) {
+                alert(`No items to email for ${module}`);
                 return;
             }
-            
-            const email = prompt('Enter customer email address:');
-            if (email) {
-                // In a real app, this would send via API
-                alert(`Receipt sent to ${email}`);
-            }
+            alert(`Receipt sent to guest email`);
         }
 
-        function saveOrder() {
-            if (currentOrder.items.length === 0) {
-                alert('No items to save');
+        function viewRoomStatement() {
+            const room = moduleData.accommodation.selectedRoom;
+            alert(`Opening statement for Room ${room}`);
+        }
+
+        function addToKitchen() {
+            alert('Order sent to kitchen');
+        }
+
+        function scheduleActivity() {
+            alert('Schedule activity dialog would open here');
+        }
+
+        function addParticipants() {
+            alert('Add participants dialog would open here');
+        }
+
+        function bookVenue() {
+            alert('Book venue dialog would open here');
+        }
+
+        function addGuestCount() {
+            alert('Add guest count dialog would open here');
+        }
+
+        function bookConference() {
+            alert('Book conference room dialog would open here');
+        }
+
+        function addAttendees() {
+            alert('Add attendees dialog would open here');
+        }
+
+        function addProject() {
+            alert('Add project dialog would open here');
+        }
+
+        function addContractor() {
+            alert('Add contractor dialog would open here');
+        }
+
+        function saveOrder(module) {
+            alert(`${module.charAt(0).toUpperCase() + module.slice(1)} order saved`);
+        }
+
+        // Settings functionality
+        function openSettingsModal() {
+            const modalEl = document.getElementById('settingsModal');
+            const modal = new bootstrap.Modal(modalEl);
+            renderSettingsRestaurantList();
+            renderSettingsRoomsList();
+            renderSettingsInventoryList();
+            modal.show();
+        }
+
+        function renderSettingsRestaurantList() {
+            const container = document.getElementById('settingsRestaurantList');
+            container.innerHTML = '';
+            const categories = Object.keys(moduleData.restaurant.itemsList);
+            categories.forEach(category => {
+                const group = document.createElement('div');
+                group.className = 'mb-3';
+                group.innerHTML = `<h6 class="mb-2">${category.charAt(0).toUpperCase() + category.slice(1)}</h6>`;
+                moduleData.restaurant.itemsList[category].forEach((it, idx) => {
+                    const row = document.createElement('div');
+                    row.className = 'd-flex justify-content-between align-items-center mb-2';
+                    row.innerHTML = `
+                        <div>
+                            <strong>${it.name}</strong><br>
+                            <small class="text-muted">$${it.price.toFixed(2)}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-danger" onclick="removeRestaurantItem('${category}', ${idx})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    group.appendChild(row);
+                });
+                container.appendChild(group);
+            });
+        }
+
+        function addRestaurantItemFromSettings() {
+            const name = document.getElementById('newRestaurantItemName').value.trim();
+            const price = parseFloat(document.getElementById('newRestaurantItemPrice').value);
+            const category = document.getElementById('newRestaurantItemCategory').value;
+            if (!name || isNaN(price)) {
+                alert('Please provide a valid name and price');
                 return;
             }
-            
-            // In a real app, this would save to database
-            alert('Order saved as draft');
+            moduleData.restaurant.itemsList[category].push({ name, price, icon: 'bi-bag' });
+            document.getElementById('newRestaurantItemName').value = '';
+            document.getElementById('newRestaurantItemPrice').value = '';
+            renderSettingsRestaurantList();
+            if (currentModule === 'restaurant' && currentCategory === category) loadCurrentModuleItems();
         }
 
-        // Initialize the application
+        function removeRestaurantItem(category, idx) {
+            if (confirm('Remove this menu item?')) {
+                moduleData.restaurant.itemsList[category].splice(idx, 1);
+                renderSettingsRestaurantList();
+                if (currentModule === 'restaurant' && currentCategory === category) loadCurrentModuleItems();
+            }
+        }
+
+        function renderSettingsRoomsList() {
+            const container = document.getElementById('settingsRoomsList');
+            container.innerHTML = '';
+            moduleData.accommodation.rooms.forEach((r, idx) => {
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center mb-2';
+                row.innerHTML = `
+                    <div>
+                        <strong>${r.value}</strong><br>
+                        <small class="text-muted">${r.label}</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-danger" onclick="removeRoom(${idx})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addRoomFromSettings() {
+            const value = document.getElementById('newRoomValue').value.trim();
+            const label = document.getElementById('newRoomLabel').value.trim();
+            if (!value || !label) {
+                alert('Please provide room number and label');
+                return;
+            }
+            moduleData.accommodation.rooms.push({ value, label });
+            document.getElementById('newRoomValue').value = '';
+            document.getElementById('newRoomLabel').value = '';
+            renderSettingsRoomsList();
+            updateRoomSelects();
+        }
+
+        function removeRoom(idx) {
+            if (confirm('Remove this room?')) {
+                moduleData.accommodation.rooms.splice(idx, 1);
+                renderSettingsRoomsList();
+                updateRoomSelects();
+            }
+        }
+
+        function renderSettingsInventoryList() {
+            const container = document.getElementById('settingsInventoryList');
+            container.innerHTML = '';
+            moduleData.inventory.items.forEach((it, idx) => {
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center mb-2';
+                row.innerHTML = `
+                    <div>
+                        <strong>${it.name}</strong><br>
+                        <small class="text-muted">Qty: ${it.qty}</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-danger" onclick="removeInventory(${idx})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addInventoryFromSettings() {
+            const name = document.getElementById('newInventoryName').value.trim();
+            const qty = parseInt(document.getElementById('newInventoryQty').value);
+            if (!name || isNaN(qty) || qty < 0) {
+                alert('Please provide a valid name and quantity');
+                return;
+            }
+            moduleData.inventory.items.push({ name, qty });
+            document.getElementById('newInventoryName').value = '';
+            document.getElementById('newInventoryQty').value = '';
+            renderSettingsInventoryList();
+        }
+
+        function removeInventory(idx) {
+            if (confirm('Remove this inventory item?')) {
+                moduleData.inventory.items.splice(idx, 1);
+                renderSettingsInventoryList();
+            }
+        }
+
+        function updateRoomSelects() {
+            const selects = [ 'accommodationRoomSelect', 'restaurantRoomSelect', 'activitiesRoomSelect' ];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.innerHTML = '<option value="">Select Room (Optional)</option>' + moduleData.accommodation.rooms.map(r => `\n                    <option value="${r.value}">${r.label}</option>`).join('');
+            });
+        }
+
+        // Initialize
+        updateRoomSelects();
         init();
 
-        // Make functions available globally for inline event handlers
+        // Global functions
         window.updateQuantity = updateQuantity;
+        window.updateQuantityInput = updateQuantityInput;
         window.removeItem = removeItem;
     </script>
 </body>
