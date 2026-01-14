@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resort POS - Receipt System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --resort-primary: #0d6efd;
+            --resort-secondary: #198754;
+            --resort-accent: #ffc107;
+            --resort-danger: #dc3545;
+            --receipt-width: 300px;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        .pos-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Order Cart Styles */
+        .order-cart {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cart-header {
+            background: var(--resort-primary);
+            color: white;
+            padding: 15px;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .cart-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+            transition: background 0.2s;
+        }
+        
+        .cart-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .item-quantity {
+            width: 60px;
+            text-align: center;
+        }
+        
+        /* Receipt Preview */
+        .receipt-preview {
+            background: white;
+            width: var(--receipt-width);
+            min-height: 500px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: 1px dashed #ccc;
+            margin: 0 auto;
+        }
+        
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .receipt-items {
+            margin: 15px 0;
+        }
+        
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .receipt-total {
+            border-top: 2px dashed #000;
+            padding-top: 10px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        
+        /* Payment Modal */
+        .payment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+        
+        .payment-content {
+            background: white;
+            width: 500px;
+            margin: 50px auto;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        /* Print Styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            .receipt-preview {
+                box-shadow: none;
+                border: none;
+                width: 100%;
+                min-height: auto;
+            }
+            
+            body {
+                background: white !important;
+            }
+        }
+        
+        /* Keyboard Styles */
+        .num-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .num-key {
+            height: 60px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        /* Quick Items */
+        .quick-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .quick-item {
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quick-item:hover {
+            background: var(--resort-primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* Animation */
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .cart-item-added {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        /* Status Badges */
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+        
+        .status-paid {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="pos-container">
+        <div class="row g-4">
+            <!-- Left Column: Order Management -->
+            <div class="col-lg-8">
+                <div class="order-cart">
+                    <!-- Cart Header -->
+                    <div class="cart-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0"><i class="bi bi-cart3"></i> Current Order</h4>
+                            <small class="opacity-75">Table 12 • 4 Guests • Server: John</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-warning">Dine-in</span>
+                            <span id="orderTime" class="text-white">10:30 AM</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Items -->
+                    <div class="p-3 border-bottom">
+                        <h6><i class="bi bi-lightning"></i> Quick Items</h6>
+                        <div class="quick-items">
+                            <div class="quick-item" data-item="Cocktail" data-price="12">
+                                <i class="bi bi-cup-straw fs-4"></i>
+                                <div>Cocktail</div>
+                                <small>$12.00</small>
+                            </div>
+                            <div class="quick-item" data-item="Beer" data-price="8">
+                                <i class="bi bi-cup fs-4"></i>
+                                <div>Local Beer</div>
+                                <small>$8.00</small>
+                            </div>
+                            <div class="quick-item" data-item="Burger" data-price="18">
+                                <i class="bi bi-basket fs-4"></i>
+                                <div>Resort Burger</div>
+                                <small>$18.00</small>
+                            </div>
+                            <div class="quick-item" data-item="Salad" data-price="14">
+                                <i class="bi bi-flower2 fs-4"></i>
+                                <div>Garden Salad</div>
+                                <small>$14.00</small>
+                            </div>
+                            <div class="quick-item" data-item="Coffee" data-price="5">
+                                <i class="bi bi-cup-hot fs-4"></i>
+                                <div>Premium Coffee</div>
+                                <small>$5.00</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cart Items -->
+                    <div class="cart-items">
+                        <div id="cartItems">
+                            <!-- Items will be added here dynamically -->
+                            <div class="text-center text-muted p-5">
+                                <i class="bi bi-cart-x fs-1"></i>
+                                <p class="mt-3">No items in cart</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cart Footer -->
+                    <div class="border-top p-3">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <input type="text" 
+                                           class="form-control" 
+                                           placeholder="Search or scan item..." 
+                                           id="itemSearch">
+                                    <button class="btn btn-outline-primary" type="button">
+                                        <i class="bi bi-upc-scan"></i> Scan
+                                    </button>
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-tag"></i> Add Discount
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm ms-2">
+                                        <i class="bi bi-person-plus"></i> Split Bill
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <h5>Subtotal: <span id="subtotal">$0.00</span></h5>
+                                <small class="text-muted">Tax: <span id="taxAmount">$0.00</span></small><br>
+                                <h4 class="text-primary">Total: <span id="totalAmount">$0.00</span></h4>
+                                <button class="btn btn-success btn-lg mt-2 w-100" id="processPayment">
+                                    <i class="bi bi-credit-card"></i> Process Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Receipt & Actions -->
+            <div class="col-lg-4">
+                <!-- Receipt Preview -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-receipt"></i> Receipt Preview</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="receipt-preview" id="receiptContent">
+                            <div class="receipt-header">
+                                <h5 class="mb-1">SUNSET RESORT & SPA</h5>
+                                <small>123 Ocean Drive, Paradise Island</small>
+                                <div class="mt-2">
+                                    <small>Tel: (123) 456-7890</small><br>
+                                    <small>www.sunsetresort.com</small>
+                                </div>
+                                <hr>
+                                <div class="text-start">
+                                    <small>Date: <span id="receiptDate">Nov 15, 2023</span></small><br>
+                                    <small>Time: <span id="receiptTime">10:30 AM</span></small><br>
+                                    <small>Order #: <span id="orderNumber">RES-001234</span></small><br>
+                                    <small>Server: John (Table 12)</small>
+                                </div>
+                            </div>
+                            
+                            <div class="receipt-items" id="receiptItems">
+                                <!-- Receipt items will be populated here -->
+                                <div class="text-center text-muted">
+                                    --- No items ---
+                                </div>
+                            </div>
+                            
+                            <div class="receipt-total">
+                                <div class="d-flex justify-content-between">
+                                    <span>Subtotal:</span>
+                                    <span id="receiptSubtotal">$0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Tax (8%):</span>
+                                    <span id="receiptTax">$0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Service (10%):</span>
+                                    <span>$0.00</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between fw-bold">
+                                    <span>TOTAL:</span>
+                                    <span id="receiptTotal">$0.00</span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <small>Thank you for visiting!</small><br>
+                                <small>*** SERVICE CHARGE MAY APPLY ***</small><br>
+                                <small>For inquiries: info@sunsetresort.com</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions Panel -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-gear"></i> Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button class="btn btn-outline-primary w-100" id="printReceipt">
+                                    <i class="bi bi-printer"></i> Print
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-success w-100" id="emailReceipt">
+                                    <i class="bi bi-envelope"></i> Email
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-info w-100" id="saveOrder">
+                                    <i class="bi bi-save"></i> Save
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-danger w-100" id="clearOrder">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Numeric Keypad -->
+                        <div class="mt-4">
+                            <h6><i class="bi bi-keyboard"></i> Numeric Keypad</h6>
+                            <div class="num-pad">
+                                <button class="btn btn-outline-secondary num-key" data-value="1">1</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="2">2</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="3">3</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="4">4</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="5">5</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="6">6</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="7">7</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="8">8</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="9">9</button>
+                                <button class="btn btn-outline-secondary num-key" data-value=".">.</button>
+                                <button class="btn btn-outline-secondary num-key" data-value="0">0</button>
+                                <button class="btn btn-outline-danger" id="backspace">
+                                    <i class="bi bi-backspace"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+    <div class="payment-modal" id="paymentModal">
+        <div class="payment-content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4><i class="bi bi-credit-card"></i> Process Payment</h4>
+                <button class="btn-close" id="closePaymentModal"></button>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Total Amount: <strong id="paymentTotal">$0.00</strong>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Payment Method</label>
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-outline-primary active" data-method="card">
+                        <i class="bi bi-credit-card"></i> Card
+                    </button>
+                    <button class="btn btn-outline-success" data-method="cash">
+                        <i class="bi bi-cash"></i> Cash
+                    </button>
+                    <button class="btn btn-outline-info" data-method="room">
+                        <i class="bi bi-building"></i> Room Charge
+                    </button>
+                </div>
+                
+                <div id="cardDetails">
+                    <div class="mb-3">
+                        <label class="form-label">Card Number</label>
+                        <input type="text" class="form-control" placeholder="1234 5678 9012 3456">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="text" class="form-control" placeholder="MM/YY">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">CVV</label>
+                            <input type="text" class="form-control" placeholder="123">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="cashDetails" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">Amount Tendered</label>
+                        <input type="number" class="form-control" id="cashAmount" step="0.01">
+                    </div>
+                    <div class="alert alert-success">
+                        Change: <strong id="changeAmount">$0.00</strong>
+                    </div>
+                </div>
+                
+                <div id="roomDetails" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">Room Number</label>
+                        <input type="text" class="form-control" placeholder="Enter room number">
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Will be charged to room account
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button class="btn btn-success btn-lg" id="confirmPayment">
+                    <i class="bi bi-check-circle"></i> Confirm Payment
+                </button>
+                <button class="btn btn-outline-secondary" id="cancelPayment">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample menu items
+        const menuItems = [
+            { id: 1, name: "Cocktail", price: 12.00, category: "Bar" },
+            { id: 2, name: "Local Beer", price: 8.00, category: "Bar" },
+            { id: 3, name: "Resort Burger", price: 18.00, category: "Food" },
+            { id: 4, name: "Garden Salad", price: 14.00, category: "Food" },
+            { id: 5, name: "Premium Coffee", price: 5.00, category: "Beverage" },
+            { id: 6, name: "Fresh Juice", price: 7.00, category: "Beverage" },
+            { id: 7, name: "Pasta Special", price: 22.00, category: "Food" },
+            { id: 8, name: "Wine Glass", price: 15.00, category: "Bar" }
+        ];
+
+        // Current order
+        let currentOrder = {
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            serviceCharge: 0,
+            total: 0,
+            orderNumber: "RES-" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0'),
+            status: "pending"
+        };
+
+        // DOM Elements
+        const cartItems = document.getElementById('cartItems');
+        const receiptItems = document.getElementById('receiptItems');
+        const subtotalEl = document.getElementById('subtotal');
+        const taxAmountEl = document.getElementById('taxAmount');
+        const totalAmountEl = document.getElementById('totalAmount');
+        const receiptSubtotal = document.getElementById('receiptSubtotal');
+        const receiptTax = document.getElementById('receiptTax');
+        const receiptTotal = document.getElementById('receiptTotal');
+        const paymentModal = document.getElementById('paymentModal');
+        const processPaymentBtn = document.getElementById('processPayment');
+        const closePaymentModal = document.getElementById('closePaymentModal');
+        const cancelPayment = document.getElementById('cancelPayment');
+        const confirmPaymentBtn = document.getElementById('confirmPayment');
+        const printReceiptBtn = document.getElementById('printReceipt');
+        const clearOrderBtn = document.getElementById('clearOrder');
+        const emailReceiptBtn = document.getElementById('emailReceipt');
+        const saveOrderBtn = document.getElementById('saveOrder');
+        const orderNumberEl = document.getElementById('orderNumber');
+        const cashAmountInput = document.getElementById('cashAmount');
+        const changeAmountEl = document.getElementById('changeAmount');
+        const paymentTotalEl = document.getElementById('paymentTotal');
+
+        // Initialize
+        function init() {
+            updateDateTime();
+            updateReceiptHeader();
+            setupEventListeners();
+            loadQuickItems();
+        }
+
+        // Update date and time
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+            const timeStr = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            document.getElementById('orderTime').textContent = timeStr;
+            document.getElementById('receiptDate').textContent = dateStr;
+            document.getElementById('receiptTime').textContent = timeStr;
+        }
+
+        function updateReceiptHeader() {
+            orderNumberEl.textContent = currentOrder.orderNumber;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Quick items
+            document.querySelectorAll('.quick-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const name = item.dataset.item;
+                    const price = parseFloat(item.dataset.price);
+                    addToCart(name, price);
+                });
+            });
+
+            // Payment buttons
+            processPaymentBtn.addEventListener('click', openPaymentModal);
+            closePaymentModal.addEventListener('click', closePaymentModalFunc);
+            cancelPayment.addEventListener('click', closePaymentModalFunc);
+            confirmPaymentBtn.addEventListener('click', processPayment);
+            
+            // Action buttons
+            printReceiptBtn.addEventListener('click', printReceipt);
+            clearOrderBtn.addEventListener('click', clearOrder);
+            emailReceiptBtn.addEventListener('click', emailReceipt);
+            saveOrderBtn.addEventListener('click', saveOrder);
+
+            // Payment method buttons
+            document.querySelectorAll('[data-method]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('[data-method]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    showPaymentMethod(this.dataset.method);
+                });
+            });
+
+            // Numeric keypad
+            document.querySelectorAll('.num-key').forEach(key => {
+                key.addEventListener('click', function() {
+                    const value = this.dataset.value;
+                    if (paymentModal.style.display === 'block') {
+                        handleKeypadInput(value);
+                    }
+                });
+            });
+
+            document.getElementById('backspace').addEventListener('click', handleBackspace);
+
+            // Cash amount input
+            cashAmountInput.addEventListener('input', calculateChange);
+        }
+
+        // Load quick items
+        function loadQuickItems() {
+            // Already hardcoded in HTML
+        }
+
+        // Add item to cart
+        function addToCart(name, price) {
+            const existingItem = currentOrder.items.find(item => item.name === name);
+            
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                currentOrder.items.push({
+                    name: name,
+                    price: price,
+                    quantity: 1,
+                    id: Date.now()
+                });
+            }
+            
+            updateCartDisplay();
+            updateReceiptDisplay();
+            calculateTotals();
+            
+            // Animation
+            const cartItem = document.querySelector(`[data-item-id="${name}"]`);
+            if (cartItem) {
+                cartItem.classList.add('cart-item-added');
+                setTimeout(() => cartItem.classList.remove('cart-item-added'), 300);
+            }
+        }
+
+        // Update cart display
+        function updateCartDisplay() {
+            if (currentOrder.items.length === 0) {
+                cartItems.innerHTML = `
+                    <div class="text-center text-muted p-5">
+                        <i class="bi bi-cart-x fs-1"></i>
+                        <p class="mt-3">No items in cart</p>
+                    </div>
+                `;
+                return;
+            }
+
+            cartItems.innerHTML = currentOrder.items.map(item => `
+                <div class="cart-item d-flex justify-content-between align-items-center" data-item-id="${item.name}">
+                    <div>
+                        <h6 class="mb-1">${item.name}</h6>
+                        <small class="text-muted">$${item.price.toFixed(2)} each</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="btn-group btn-group-sm me-3">
+                            <button class="btn btn-outline-secondary" onclick="updateQuantity('${item.name}', -1)">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <span class="btn btn-light item-quantity">${item.quantity}</span>
+                            <button class="btn btn-outline-secondary" onclick="updateQuantity('${item.name}', 1)">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <h6 class="mb-0">$${(item.price * item.quantity).toFixed(2)}</h6>
+                        <button class="btn btn-link text-danger ms-2" onclick="removeItem('${item.name}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update receipt display
+        function updateReceiptDisplay() {
+            if (currentOrder.items.length === 0) {
+                receiptItems.innerHTML = `
+                    <div class="text-center text-muted">
+                        --- No items ---
+                    </div>
+                `;
+                return;
+            }
+
+            receiptItems.innerHTML = currentOrder.items.map(item => `
+                <div class="receipt-item">
+                    <div>
+                        ${item.name} x${item.quantity}
+                    </div>
+                    <div>$${(item.price * item.quantity).toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Calculate totals
+        function calculateTotals() {
+            currentOrder.subtotal = currentOrder.items.reduce((sum, item) => 
+                sum + (item.price * item.quantity), 0);
+            
+            currentOrder.tax = currentOrder.subtotal * 0.08;
+            currentOrder.serviceCharge = currentOrder.subtotal * 0.10;
+            currentOrder.total = currentOrder.subtotal + currentOrder.tax + currentOrder.serviceCharge;
+
+            // Update UI
+            subtotalEl.textContent = `$${currentOrder.subtotal.toFixed(2)}`;
+            taxAmountEl.textContent = `$${currentOrder.tax.toFixed(2)}`;
+            totalAmountEl.textContent = `$${currentOrder.total.toFixed(2)}`;
+            
+            receiptSubtotal.textContent = `$${currentOrder.subtotal.toFixed(2)}`;
+            receiptTax.textContent = `$${currentOrder.tax.toFixed(2)}`;
+            receiptTotal.textContent = `$${currentOrder.total.toFixed(2)}`;
+            
+            paymentTotalEl.textContent = `$${currentOrder.total.toFixed(2)}`;
+        }
+
+        // Update item quantity
+        function updateQuantity(itemName, change) {
+            const item = currentOrder.items.find(i => i.name === itemName);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeItem(itemName);
+                } else {
+                    updateCartDisplay();
+                    updateReceiptDisplay();
+                    calculateTotals();
+                }
+            }
+        }
+
+        // Remove item from cart
+        function removeItem(itemName) {
+            currentOrder.items = currentOrder.items.filter(item => item.name !== itemName);
+            updateCartDisplay();
+            updateReceiptDisplay();
+            calculateTotals();
+        }
+
+        // Payment Modal Functions
+        function openPaymentModal() {
+            if (currentOrder.items.length === 0) {
+                alert('Please add items to cart first');
+                return;
+            }
+            paymentModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePaymentModalFunc() {
+            paymentModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function showPaymentMethod(method) {
+            document.getElementById('cardDetails').style.display = 'none';
+            document.getElementById('cashDetails').style.display = 'none';
+            document.getElementById('roomDetails').style.display = 'none';
+            
+            if (method === 'card') {
+                document.getElementById('cardDetails').style.display = 'block';
+            } else if (method === 'cash') {
+                document.getElementById('cashDetails').style.display = 'block';
+                cashAmountInput.value = currentOrder.total.toFixed(2);
+                calculateChange();
+            } else if (method === 'room') {
+                document.getElementById('roomDetails').style.display = 'block';
+            }
+        }
+
+        function handleKeypadInput(value) {
+            const activeInput = document.querySelector('#paymentModal input:focus');
+            if (activeInput && activeInput.id === 'cashAmount') {
+                if (value === '.') {
+                    if (!activeInput.value.includes('.')) {
+                        activeInput.value += value;
+                    }
+                } else {
+                    activeInput.value += value;
+                }
+                calculateChange();
+            }
+        }
+
+        function handleBackspace() {
+            const activeInput = document.querySelector('#paymentModal input:focus');
+            if (activeInput && activeInput.id === 'cashAmount') {
+                activeInput.value = activeInput.value.slice(0, -1);
+                calculateChange();
+            }
+        }
+
+        function calculateChange() {
+            const cashAmount = parseFloat(cashAmountInput.value) || 0;
+            const change = cashAmount - currentOrder.total;
+            changeAmountEl.textContent = `$${change.toFixed(2)}`;
+            
+            if (change < 0) {
+                changeAmountEl.style.color = '#dc3545';
+            } else {
+                changeAmountEl.style.color = '#198754';
+            }
+        }
+
+        function processPayment() {
+            // In a real app, this would process payment via API
+            alert('Payment processed successfully!');
+            
+            // Mark order as paid
+            currentOrder.status = 'paid';
+            currentOrder.paidAt = new Date().toISOString();
+            
+            // Print receipt
+            printReceipt();
+            
+            // Close modal and clear order
+            closePaymentModalFunc();
+            setTimeout(clearOrder, 1000);
+        }
+
+        function printReceipt() {
+            if (currentOrder.items.length === 0) {
+                alert('No items to print');
+                return;
+            }
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Receipt - ${currentOrder.orderNumber}</title>
+                    <style>
+                        body { 
+                            font-family: 'Courier New', monospace; 
+                            width: 300px;
+                            margin: 0 auto;
+                            padding: 20px;
+                        }
+                        .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px; }
+                        .item { display: flex; justify-content: space-between; margin: 5px 0; }
+                        .total { border-top: 2px dashed #000; padding-top: 10px; margin-top: 15px; font-weight: bold; }
+                        .footer { text-align: center; margin-top: 20px; font-size: 12px; }
+                        @media print { 
+                            body { width: 100%; }
+                            button { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h3>SUNSET RESORT & SPA</h3>
+                        <p>123 Ocean Drive, Paradise Island</p>
+                        <p>Tel: (123) 456-7890</p>
+                        <hr>
+                        <p>Date: ${document.getElementById('receiptDate').textContent}</p>
+                        <p>Time: ${document.getElementById('receiptTime').textContent}</p>
+                        <p>Order #: ${currentOrder.orderNumber}</p>
+                    </div>
+                    
+                    <div class="items">
+                        ${currentOrder.items.map(item => `
+                            <div class="item">
+                                <span>${item.name} x${item.quantity}</span>
+                                <span>$${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="total">
+                        <div class="item">
+                            <span>Subtotal:</span>
+                            <span>$${currentOrder.subtotal.toFixed(2)}</span>
+                        </div>
+                        <div class="item">
+                            <span>Tax (8%):</span>
+                            <span>$${currentOrder.tax.toFixed(2)}</span>
+                        </div>
+                        <div class="item">
+                            <span>Service (10%):</span>
+                            <span>$${currentOrder.serviceCharge.toFixed(2)}</span>
+                        </div>
+                        <div class="item">
+                            <strong>TOTAL:</strong>
+                            <strong>$${currentOrder.total.toFixed(2)}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>*** PAID ***</p>
+                        <p>Thank you for visiting!</p>
+                        <p>For inquiries: info@sunsetresort.com</p>
+                    </div>
+                    
+                    <button onclick="window.print()" style="position:fixed;top:20px;right:20px;padding:10px;background:#007bff;color:white;border:none;border-radius:5px;">
+                        Print Receipt
+                    </button>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        function clearOrder() {
+            if (confirm('Are you sure you want to clear the current order?')) {
+                currentOrder.items = [];
+                currentOrder.subtotal = 0;
+                currentOrder.tax = 0;
+                currentOrder.serviceCharge = 0;
+                currentOrder.total = 0;
+                currentOrder.orderNumber = "RES-" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+                currentOrder.status = "pending";
+                
+                updateCartDisplay();
+                updateReceiptDisplay();
+                calculateTotals();
+                updateReceiptHeader();
+                
+                alert('Order cleared. New order started.');
+            }
+        }
+
+        function emailReceipt() {
+            if (currentOrder.items.length === 0) {
+                alert('No items to email');
+                return;
+            }
+            
+            const email = prompt('Enter customer email address:');
+            if (email) {
+                // In a real app, this would send via API
+                alert(`Receipt sent to ${email}`);
+            }
+        }
+
+        function saveOrder() {
+            if (currentOrder.items.length === 0) {
+                alert('No items to save');
+                return;
+            }
+            
+            // In a real app, this would save to database
+            alert('Order saved as draft');
+        }
+
+        // Initialize the application
+        init();
+
+        // Make functions available globally for inline event handlers
+        window.updateQuantity = updateQuantity;
+        window.removeItem = removeItem;
+    </script>
+</body>
+</html>
