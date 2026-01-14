@@ -1192,10 +1192,7 @@
                     e.preventDefault();
                     const module = item.dataset.module;
                     
-                    if (module === 'settings' || item.id === 'settingsBtn') {
-                        openSettingsModal();
-                        return;
-                    }
+                    if (!module) return;
                     
                     document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
                     item.classList.add('active');
@@ -1204,7 +1201,7 @@
                     document.getElementById(`${module}-module`).classList.add('active');
                     
                     currentModule = module;
-                    currentCategory = moduleData[module].categories[0];
+                    currentCategory = moduleData[module] && moduleData[module].categories ? moduleData[module].categories[0] : null;
 
                     // show or hide restaurant search when switching modules
                     const searchWrapper = document.getElementById('restaurantSearchWrapper');
@@ -1216,6 +1213,13 @@
                             searchWrapper.style.display = 'none';
                             if (searchInput) searchInput.value = '';
                         }
+                    }
+
+                    // If settings opened, render settings lists
+                    if (module === 'settings') {
+                        renderSettingsRestaurantList();
+                        renderSettingsRoomsList();
+                        renderSettingsInventoryList();
                     }
 
                     loadCurrentModuleItems();
@@ -1597,12 +1601,21 @@
 
         // Settings functionality
         function openSettingsModal() {
-            const modalEl = document.getElementById('settingsModal');
-            const modal = new bootstrap.Modal(modalEl);
+            // Activate settings module (non-modal)
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            const btn = document.querySelector('.sidebar-item[data-module="settings"]') || document.getElementById('settingsBtn');
+            if (btn) btn.classList.add('active');
+
+            document.querySelectorAll('.module-content').forEach(m => m.classList.remove('active'));
+            const settingsEl = document.getElementById('settings-module');
+            if (settingsEl) settingsEl.classList.add('active');
+
+            currentModule = 'settings';
+            currentCategory = null;
+
             renderSettingsRestaurantList();
             renderSettingsRoomsList();
             renderSettingsInventoryList();
-            modal.show();
         }
 
         function renderSettingsRestaurantList() {
